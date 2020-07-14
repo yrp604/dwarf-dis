@@ -2,7 +2,7 @@ use std::env;
 use std::fs;
 use std::process;
 
-use dwdis::dis;
+use dwarf_dis::dis;
 
 use flexi_logger::Logger;
 

@@ -1,4 +1,5 @@
 use std::convert::TryInto;
+use std::mem;
 
 use log::*;
 use nano_leb128::{SLEB128, ULEB128};
@@ -20,49 +21,61 @@ fn read_i8(pc: &mut usize, bytecode: &[u8]) -> i8 {
 }
 
 fn read_u16(pc: &mut usize, bytecode: &[u8]) -> u16 {
-    let r = u16::from_le_bytes(bytecode[*pc..*pc + 2].try_into().unwrap());
+    let ty_sz = mem::size_of::<u16>();
 
-    *pc += 2;
+    let r = u16::from_le_bytes(bytecode[*pc..*pc + ty_sz].try_into().unwrap());
+
+    *pc += ty_sz;
 
     r
 }
 
 fn read_i16(pc: &mut usize, bytecode: &[u8]) -> i16 {
-    let r = i16::from_le_bytes(bytecode[*pc..*pc + 2].try_into().unwrap());
+    let ty_sz = mem::size_of::<i16>();
 
-    *pc += 2;
+    let r = i16::from_le_bytes(bytecode[*pc..*pc + ty_sz].try_into().unwrap());
+
+    *pc += ty_sz;
 
     r
 }
 
 fn read_u32(pc: &mut usize, bytecode: &[u8]) -> u32 {
-    let r = u32::from_le_bytes(bytecode[*pc..*pc + 4].try_into().unwrap());
+    let ty_sz = mem::size_of::<u32>();
 
-    *pc += 4;
+    let r = u32::from_le_bytes(bytecode[*pc..*pc + ty_sz].try_into().unwrap());
+
+    *pc += ty_sz;
 
     r
 }
 
 fn read_i32(pc: &mut usize, bytecode: &[u8]) -> i32 {
-    let r = i32::from_le_bytes(bytecode[*pc..*pc + 4].try_into().unwrap());
+    let ty_sz = mem::size_of::<i32>();
 
-    *pc += 4;
+    let r = i32::from_le_bytes(bytecode[*pc..*pc + ty_sz].try_into().unwrap());
+
+    *pc += ty_sz;
 
     r
 }
 
 fn read_u64(pc: &mut usize, bytecode: &[u8]) -> u64 {
-    let r = u64::from_le_bytes(bytecode[*pc..*pc + 8].try_into().unwrap());
+    let ty_sz = mem::size_of::<u64>();
 
-    *pc += 8;
+    let r = u64::from_le_bytes(bytecode[*pc..*pc + ty_sz].try_into().unwrap());
+
+    *pc += ty_sz;
 
     r
 }
 
 fn read_i64(pc: &mut usize, bytecode: &[u8]) -> i64 {
-    let r = i64::from_le_bytes(bytecode[*pc..*pc + 8].try_into().unwrap());
+    let ty_sz = mem::size_of::<i64>();
 
-    *pc += 8;
+    let r = i64::from_le_bytes(bytecode[*pc..*pc + ty_sz].try_into().unwrap());
+
+    *pc += ty_sz;
 
     r
 }

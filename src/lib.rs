@@ -152,6 +152,59 @@ pub enum Op {
     Nop,
 }
 
+impl Op {
+    pub fn mnem(&self) -> &str {
+        match *self {
+            Self::Addr => "addr",
+            Self::Deref => "deref",
+            Self::Const1u(_) => "const1u",
+            Self::Const1s(_) => "const1s",
+            Self::Const2u(_) => "const2u",
+            Self::Const2s(_) => "const2s",
+            Self::Const4u(_) => "const4u",
+            Self::Const4s(_) => "const4s",
+            Self::Const8u(_) => "const8u",
+            Self::Const8s(_) => "const8s",
+            Self::Constu(_) => "constu",
+            Self::Consts(_) => "consts",
+            Self::Dup => "dup",
+            Self::Drop => "drop",
+            Self::Over => "over",
+            Self::Pick(_) => "pick",
+            Self::Swap => "swap",
+            Self::Rot => "rot",
+            Self::Abs => "abs",
+            Self::And => "and",
+            Self::Div => "div",
+            Self::Minus => "minus",
+            Self::Mod => "mod",
+            Self::Mul => "mul",
+            Self::Neg => "neg",
+            Self::Not => "not",
+            Self::Or => "or",
+            Self::Plus => "plus",
+            Self::PlusConst(_) => "plus_const",
+            Self::Bra(_) => "bra",
+            Self::Eq => "eq",
+            Self::Ge => "ge",
+            Self::Gt => "gt",
+            Self::Le => "le",
+            Self::Lt => "lt",
+            Self::Ne => "ne",
+            Self::Shl => "shl",
+            Self::Shr => "shr",
+            Self::Shra => "shra",
+            Self::Xor => "xor",
+            Self::Skip(_) => "skip",
+            Self::Lit(_) => "lit",
+            Self::Reg(_) => "reg",
+            Self::Breg(_) => "breg",
+            Self::DerefSize(_) => "deref_size",
+            Self::Nop => "nop",
+        }
+    }
+}
+
 pub fn decode(mut pc: usize, bytecode: &[u8]) -> (usize, Op) {
     let op = bytecode[pc];
     let orig_pc = pc;

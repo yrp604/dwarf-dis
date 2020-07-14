@@ -20,7 +20,7 @@ fn read_i8(pc: &mut usize, bytecode: &[u8]) -> i8 {
 }
 
 fn read_u16(pc: &mut usize, bytecode: &[u8]) -> u16 {
-    let r = u16::from_le_bytes(bytecode[*pc..*pc+2].try_into().unwrap());
+    let r = u16::from_le_bytes(bytecode[*pc..*pc + 2].try_into().unwrap());
 
     *pc += 2;
 
@@ -28,7 +28,7 @@ fn read_u16(pc: &mut usize, bytecode: &[u8]) -> u16 {
 }
 
 fn read_i16(pc: &mut usize, bytecode: &[u8]) -> i16 {
-    let r = i16::from_le_bytes(bytecode[*pc..*pc+2].try_into().unwrap());
+    let r = i16::from_le_bytes(bytecode[*pc..*pc + 2].try_into().unwrap());
 
     *pc += 2;
 
@@ -36,7 +36,7 @@ fn read_i16(pc: &mut usize, bytecode: &[u8]) -> i16 {
 }
 
 fn read_u32(pc: &mut usize, bytecode: &[u8]) -> u32 {
-    let r = u32::from_le_bytes(bytecode[*pc..*pc+4].try_into().unwrap());
+    let r = u32::from_le_bytes(bytecode[*pc..*pc + 4].try_into().unwrap());
 
     *pc += 4;
 
@@ -44,7 +44,7 @@ fn read_u32(pc: &mut usize, bytecode: &[u8]) -> u32 {
 }
 
 fn read_i32(pc: &mut usize, bytecode: &[u8]) -> i32 {
-    let r = i32::from_le_bytes(bytecode[*pc..*pc+4].try_into().unwrap());
+    let r = i32::from_le_bytes(bytecode[*pc..*pc + 4].try_into().unwrap());
 
     *pc += 4;
 
@@ -52,7 +52,7 @@ fn read_i32(pc: &mut usize, bytecode: &[u8]) -> i32 {
 }
 
 fn read_u64(pc: &mut usize, bytecode: &[u8]) -> u64 {
-    let r = u64::from_le_bytes(bytecode[*pc..*pc+8].try_into().unwrap());
+    let r = u64::from_le_bytes(bytecode[*pc..*pc + 8].try_into().unwrap());
 
     *pc += 8;
 
@@ -60,7 +60,7 @@ fn read_u64(pc: &mut usize, bytecode: &[u8]) -> u64 {
 }
 
 fn read_i64(pc: &mut usize, bytecode: &[u8]) -> i64 {
-    let r = i64::from_le_bytes(bytecode[*pc..*pc+8].try_into().unwrap());
+    let r = i64::from_le_bytes(bytecode[*pc..*pc + 8].try_into().unwrap());
 
     *pc += 8;
 
@@ -68,8 +68,10 @@ fn read_i64(pc: &mut usize, bytecode: &[u8]) -> i64 {
 }
 
 fn read_uleb128(pc: &mut usize, bytecode: &[u8]) -> u64 {
-    let (val, sz) = ULEB128::read_from(bytecode)
-        .expect(&format!("Could not read uleb128 value from bytecode @ {:x}", pc));
+    let (val, sz) = ULEB128::read_from(bytecode).expect(&format!(
+        "Could not read uleb128 value from bytecode @ {:x}",
+        pc
+    ));
 
     *pc += sz;
 
@@ -77,8 +79,10 @@ fn read_uleb128(pc: &mut usize, bytecode: &[u8]) -> u64 {
 }
 
 fn read_sleb128(pc: &mut usize, bytecode: &[u8]) -> i64 {
-    let (val, sz) = SLEB128::read_from(bytecode)
-        .expect(&format!("Could not read sleb128 value from bytecode @ {:x}", pc));
+    let (val, sz) = SLEB128::read_from(bytecode).expect(&format!(
+        "Could not read sleb128 value from bytecode @ {:x}",
+        pc
+    ));
 
     *pc += sz;
 
@@ -140,7 +144,9 @@ pub fn dis(bytecode: &[u8]) -> Vec<(usize, Op)> {
     let mut disas = vec![];
 
     loop {
-        if pc >= bytecode.len() { break }
+        if pc >= bytecode.len() {
+            break;
+        }
 
         let op = bytecode[pc];
         let orig_pc = pc;
@@ -258,7 +264,7 @@ pub fn dis(bytecode: &[u8]) -> Vec<(usize, Op)> {
                 assert!([1, 2, 4, 8].contains(&sz));
 
                 Op::DerefSize(sz)
-            },
+            }
             0x96 => Op::Nop,
             _ => unimplemented!("opcode {:04x}: 0x{:02x}", orig_pc, op),
         };

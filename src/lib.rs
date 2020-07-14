@@ -152,140 +152,129 @@ pub enum Op {
     Nop,
 }
 
-pub fn dis(bytecode: &[u8]) -> Vec<(usize, Op)> {
-    let mut pc = 0;
-    let mut disas = vec![];
+pub fn decode(mut pc: usize, bytecode: &[u8]) -> (usize, Op) {
+    let op = bytecode[pc];
+    let orig_pc = pc;
+    pc += 1;
 
-    loop {
-        if pc >= bytecode.len() {
-            break;
+    let parsed_op = match op {
+        0x03 => Op::Addr,
+        0x06 => Op::Deref,
+        0x08 => {
+            let res = read_u8(&mut pc, &bytecode);
+            Op::Const1u(res)
         }
+        0x09 => {
+            let res = read_i8(&mut pc, &bytecode);
+            Op::Const1s(res)
+        }
+        0x0a => {
+            let res = read_u16(&mut pc, &bytecode);
+            Op::Const2u(res)
+        }
+        0x0b => {
+            let res = read_i16(&mut pc, &bytecode);
+            Op::Const2s(res)
+        }
+        0x0c => {
+            let res = read_u32(&mut pc, &bytecode);
+            Op::Const4u(res)
+        }
+        0x0d => {
+            let res = read_i32(&mut pc, &bytecode);
+            Op::Const4s(res)
+        }
+        0x0e => {
+            let res = read_u64(&mut pc, &bytecode);
+            Op::Const8u(res)
+        }
+        0x0f => {
+            let res = read_i64(&mut pc, &bytecode);
+            Op::Const8s(res)
+        }
+        0x10 => {
+            let res = read_uleb128(&mut pc, &bytecode);
 
-        let op = bytecode[pc];
-        let orig_pc = pc;
-        pc += 1;
+            Op::Constu(res)
+        }
+        0x11 => {
+            let res = read_sleb128(&mut pc, &bytecode);
 
-        let parsed_op = match op {
-            0x03 => Op::Addr,
-            0x06 => Op::Deref,
-            0x08 => {
-                let res = read_u8(&mut pc, &bytecode);
-                Op::Const1u(res)
-            }
-            0x09 => {
-                let res = read_i8(&mut pc, &bytecode);
-                Op::Const1s(res)
-            }
-            0x0a => {
-                let res = read_u16(&mut pc, &bytecode);
-                Op::Const2u(res)
-            }
-            0x0b => {
-                let res = read_i16(&mut pc, &bytecode);
-                Op::Const2s(res)
-            }
-            0x0c => {
-                let res = read_u32(&mut pc, &bytecode);
-                Op::Const4u(res)
-            }
-            0x0d => {
-                let res = read_i32(&mut pc, &bytecode);
-                Op::Const4s(res)
-            }
-            0x0e => {
-                let res = read_u64(&mut pc, &bytecode);
-                Op::Const8u(res)
-            }
-            0x0f => {
-                let res = read_i64(&mut pc, &bytecode);
-                Op::Const8s(res)
-            }
-            0x10 => {
-                let res = read_uleb128(&mut pc, &bytecode);
+            Op::Consts(res)
+        }
+        0x12 => Op::Dup,
+        0x13 => Op::Drop,
+        0x14 => Op::Over,
+        0x15 => {
+            let off = read_u8(&mut pc, &bytecode);
 
-                Op::Constu(res)
-            }
-            0x11 => {
-                let res = read_sleb128(&mut pc, &bytecode);
+            Op::Pick(off)
+        }
+        0x16 => Op::Swap,
+        0x17 => Op::Rot,
+        // xderef unimplemented by libgcc?
+        0x19 => Op::Abs,
+        0x1a => Op::And,
+        0x1b => Op::Div,
+        0x1c => Op::Minus,
+        0x1d => Op::Mod,
+        0x1e => Op::Mul,
+        0x1f => Op::Neg,
+        0x20 => Op::Not,
+        0x21 => Op::Or,
+        0x22 => Op::Plus,
+        0x23 => {
+            let val = read_uleb128(&mut pc, &bytecode);
 
-                Op::Consts(res)
-            }
-            0x12 => Op::Dup,
-            0x13 => Op::Drop,
-            0x14 => Op::Over,
-            0x15 => {
-                let off = read_u8(&mut pc, &bytecode);
+            Op::PlusConst(val)
+        }
+        0x24 => Op::Shl,
+        0x25 => Op::Shr,
+        0x26 => Op::Shra,
+        0x27 => Op::Xor,
+        0x28 => {
+            let off = read_i16(&mut pc, &bytecode);
 
-                Op::Pick(off)
-            }
-            0x16 => Op::Swap,
-            0x17 => Op::Rot,
-            // xderef unimplemented by libgcc?
-            0x19 => Op::Abs,
-            0x1a => Op::And,
-            0x1b => Op::Div,
-            0x1c => Op::Minus,
-            0x1d => Op::Mod,
-            0x1e => Op::Mul,
-            0x1f => Op::Neg,
-            0x20 => Op::Not,
-            0x21 => Op::Or,
-            0x22 => Op::Plus,
-            0x23 => {
-                let val = read_uleb128(&mut pc, &bytecode);
+            Op::Bra(off)
+        }
+        0x29 => Op::Eq,
+        0x2a => Op::Ge,
+        0x2b => Op::Gt,
+        0x2c => Op::Le,
+        0x2d => Op::Lt,
+        0x2e => Op::Ne,
+        0x2f => {
+            let off = read_i16(&mut pc, &bytecode);
 
-                Op::PlusConst(val)
-            }
-            0x24 => Op::Shl,
-            0x25 => Op::Shr,
-            0x26 => Op::Shra,
-            0x27 => Op::Xor,
-            0x28 => {
-                let off = read_i16(&mut pc, &bytecode);
+            Op::Skip(off)
+        }
+        0x30..=0x4f => {
+            let lit = op - 0x30;
 
-                Op::Bra(off)
-            }
-            0x29 => Op::Eq,
-            0x2a => Op::Ge,
-            0x2b => Op::Gt,
-            0x2c => Op::Le,
-            0x2d => Op::Lt,
-            0x2e => Op::Ne,
-            0x2f => {
-                let off = read_i16(&mut pc, &bytecode);
+            Op::Lit(lit)
+        }
+        0x50..=0x6f => {
+            let reg = op - 0x50;
 
-                Op::Skip(off)
-            }
-            0x30..=0x4f => {
-                let lit = op - 0x30;
+            Op::Reg(reg)
+        }
+        0x70..=0x8f => {
+            let breg = op - 0x70;
 
-                Op::Lit(lit)
-            }
-            0x50..=0x6f => {
-                let reg = op - 0x50;
+            Op::Breg(breg)
+        }
+        0x94 => {
+            let sz = read_u8(&mut pc, &bytecode) as usize;
 
-                Op::Reg(reg)
-            }
-            0x70..=0x8f => {
-                let breg = op - 0x70;
+            assert!([1, 2, 4, 8].contains(&sz));
 
-                Op::Breg(breg)
-            }
-            0x94 => {
-                let sz = read_u8(&mut pc, &bytecode) as usize;
+            Op::DerefSize(sz)
+        }
+        0x96 => Op::Nop,
+        _ => unimplemented!("opcode {:04x}: 0x{:02x}", orig_pc, op),
+    };
 
-                assert!([1, 2, 4, 8].contains(&sz));
+    debug!("{:04x}: {:x?}", orig_pc, parsed_op);
 
-                Op::DerefSize(sz)
-            }
-            0x96 => Op::Nop,
-            _ => unimplemented!("opcode {:04x}: 0x{:02x}", orig_pc, op),
-        };
-
-        debug!("{:04x}: {:x?}", orig_pc, parsed_op);
-
-        disas.push((orig_pc, parsed_op))
-    }
-
-    disas
+    (pc - orig_pc, parsed_op)
 }

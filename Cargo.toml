@@ -1,0 +1,20 @@
+[package]
+name = "dwdis"
+version = "0.1.0"
+authors = ["yrp <yrp604@protonmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "dwdis"
+path = "src/lib.rs"
+
+[[bin]]
+name = "dwtest"
+path = "src/bin.rs"
+
+[dependencies]
+flexi_logger = "0.15"
+log = "0.4"
+nano-leb128 = "0.1"

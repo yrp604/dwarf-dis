@@ -24,7 +24,7 @@ fn main() {
             break;
         }
 
-        let (sz, op) = decode(pc, &bytecode);
+        let (sz, op) = decode(&bytecode[pc..]).unwrap();
 
         println!("{:04x}: {:x?}", pc, op);
 

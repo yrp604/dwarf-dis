@@ -1,110 +1,116 @@
 use std::convert::TryInto;
+use std::error::Error;
+use std::fmt;
 use std::mem;
 
 use log::*;
 use nano_leb128::{SLEB128, ULEB128};
 
-fn read_u8(pc: &mut usize, bytecode: &[u8]) -> u8 {
-    let r = bytecode[*pc];
+fn read_u8(bytecode: &[u8]) -> (usize, u8) {
+    let ty_sz = mem::size_of::<i8>();
 
-    *pc += 1;
+    let r = bytecode[0];
 
-    r
+    (ty_sz, r)
 }
 
-fn read_i8(pc: &mut usize, bytecode: &[u8]) -> i8 {
-    let r = bytecode[*pc] as i8;
+fn read_i8(bytecode: &[u8]) -> (usize, i8) {
+    let ty_sz = mem::size_of::<i8>();
 
-    *pc += 1;
+    let r = bytecode[0] as i8;
 
-    r
+    (ty_sz, r)
 }
 
-fn read_u16(pc: &mut usize, bytecode: &[u8]) -> u16 {
+fn read_u16(bytecode: &[u8]) -> (usize, u16) {
     let ty_sz = mem::size_of::<u16>();
 
-    let r = u16::from_le_bytes(bytecode[*pc..*pc + ty_sz].try_into().unwrap());
+    let r = u16::from_le_bytes(bytecode[..ty_sz].try_into().unwrap());
 
-    *pc += ty_sz;
-
-    r
+    (ty_sz, r)
 }
 
-fn read_i16(pc: &mut usize, bytecode: &[u8]) -> i16 {
+fn read_i16(bytecode: &[u8]) -> (usize, i16) {
     let ty_sz = mem::size_of::<i16>();
 
-    let r = i16::from_le_bytes(bytecode[*pc..*pc + ty_sz].try_into().unwrap());
+    let r = i16::from_le_bytes(bytecode[..ty_sz].try_into().unwrap());
 
-    *pc += ty_sz;
-
-    r
+    (ty_sz , r)
 }
 
-fn read_u32(pc: &mut usize, bytecode: &[u8]) -> u32 {
+fn read_u32(bytecode: &[u8]) -> (usize, u32) {
     let ty_sz = mem::size_of::<u32>();
 
-    let r = u32::from_le_bytes(bytecode[*pc..*pc + ty_sz].try_into().unwrap());
+    let r = u32::from_le_bytes(bytecode[..ty_sz].try_into().unwrap());
 
-    *pc += ty_sz;
-
-    r
+    (ty_sz, r)
 }
 
-fn read_i32(pc: &mut usize, bytecode: &[u8]) -> i32 {
+fn read_i32(bytecode: &[u8]) -> (usize, i32) {
     let ty_sz = mem::size_of::<i32>();
 
-    let r = i32::from_le_bytes(bytecode[*pc..*pc + ty_sz].try_into().unwrap());
+    let r = i32::from_le_bytes(bytecode[..ty_sz].try_into().unwrap());
 
-    *pc += ty_sz;
-
-    r
+    (ty_sz, r)
 }
 
-fn read_u64(pc: &mut usize, bytecode: &[u8]) -> u64 {
+fn read_u64(bytecode: &[u8]) -> (usize, u64) {
     let ty_sz = mem::size_of::<u64>();
 
-    let r = u64::from_le_bytes(bytecode[*pc..*pc + ty_sz].try_into().unwrap());
+    let r = u64::from_le_bytes(bytecode[..ty_sz].try_into().unwrap());
 
-    *pc += ty_sz;
-
-    r
+    (ty_sz, r)
 }
 
-fn read_i64(pc: &mut usize, bytecode: &[u8]) -> i64 {
+fn read_i64(bytecode: &[u8]) -> (usize, i64) {
     let ty_sz = mem::size_of::<i64>();
 
-    let r = i64::from_le_bytes(bytecode[*pc..*pc + ty_sz].try_into().unwrap());
+    let r = i64::from_le_bytes(bytecode[..ty_sz].try_into().unwrap());
 
-    *pc += ty_sz;
-
-    r
+    (ty_sz, r)
 }
 
-fn read_uleb128(pc: &mut usize, bytecode: &[u8]) -> u64 {
+fn read_uleb128(bytecode: &[u8]) -> (usize, u64) {
     let (val, sz) = ULEB128::read_from(bytecode).expect(&format!(
-        "Could not read uleb128 value from bytecode @ {:x}",
-        pc
+        "Could not read uleb128 value from bytecode {:x?}",
+        &bytecode[..10]
     ));
 
-    *pc += sz;
 
-    val.into()
+    (sz, val.into())
 }
 
-fn read_sleb128(pc: &mut usize, bytecode: &[u8]) -> i64 {
+fn read_sleb128(bytecode: &[u8]) -> (usize, i64) {
     let (val, sz) = SLEB128::read_from(bytecode).expect(&format!(
-        "Could not read sleb128 value from bytecode @ {:x}",
-        pc
+        "Could not read sleb128 value from bytecode @ {:x?}",
+        &bytecode[..10]
     ));
 
-    *pc += sz;
+    (sz, val.into())
+}
 
-    val.into()
+#[derive(Copy, Clone, Debug, Hash, Eq, PartialEq)]
+pub enum DwarfDisError {
+    Decode(u8)
+}
+
+impl fmt::Display for DwarfDisError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match *self {
+            Self::Decode(op) => write!(f, "dwarf-dis: could not decode opcode {:#x}", op),
+        }
+    }
+}
+
+impl Error for DwarfDisError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        None
+    }
 }
 
 #[derive(Copy, Clone, Debug, Hash, Eq, PartialEq)]
 pub enum Op {
-    Addr,
+    Addr(u64),
     Deref,
     Const1u(u8),
     Const1s(i8),
@@ -147,7 +153,9 @@ pub enum Op {
     Skip(i16),
     Lit(u8),
     Reg(u8),
-    Breg(u8),
+    BReg(u8, isize),
+    RegX(u64),
+    BRegX(u64, isize),
     DerefSize(usize),
     Nop,
 }
@@ -155,7 +163,7 @@ pub enum Op {
 impl Op {
     pub fn mnem(&self) -> &str {
         match *self {
-            Self::Addr => "addr",
+            Self::Addr(_) => "addr",
             Self::Deref => "deref",
             Self::Const1u(_) => "const1u",
             Self::Const1s(_) => "const1s",
@@ -198,60 +206,75 @@ impl Op {
             Self::Skip(_) => "skip",
             Self::Lit(_) => "lit",
             Self::Reg(_) => "reg",
-            Self::Breg(_) => "breg",
+            Self::BReg(_, _) => "breg",
+            Self::RegX(_) => "regx",
+            Self::BRegX(_, _) => "bregx",
             Self::DerefSize(_) => "deref_size",
             Self::Nop => "nop",
         }
     }
 }
 
-pub fn decode(mut pc: usize, bytecode: &[u8]) -> (usize, Op) {
-    let op = bytecode[pc];
-    let orig_pc = pc;
-    pc += 1;
+pub fn decode(bytecode: &[u8]) -> Result<(usize, Op), DwarfDisError> {
+    let op = bytecode[0];
+    let mut sz = 1;
 
     let parsed_op = match op {
-        0x03 => Op::Addr,
+        0x03 => {
+            let (data_sz, res) = read_u64(&bytecode[sz..]);
+            sz += data_sz;
+            Op::Addr(res)
+        }
         0x06 => Op::Deref,
         0x08 => {
-            let res = read_u8(&mut pc, &bytecode);
+            let (data_sz, res) = read_u8(&bytecode[sz..]);
+            sz += data_sz;
             Op::Const1u(res)
         }
         0x09 => {
-            let res = read_i8(&mut pc, &bytecode);
+            let (data_sz, res) = read_i8(&bytecode[sz..]);
+            sz += data_sz;
             Op::Const1s(res)
         }
         0x0a => {
-            let res = read_u16(&mut pc, &bytecode);
+            let (data_sz, res) = read_u16(&bytecode[sz..]);
+            sz += data_sz;
             Op::Const2u(res)
         }
         0x0b => {
-            let res = read_i16(&mut pc, &bytecode);
+            let (data_sz, res) = read_i16(&bytecode[sz..]);
+            sz += data_sz;
             Op::Const2s(res)
         }
         0x0c => {
-            let res = read_u32(&mut pc, &bytecode);
+            let (data_sz, res) = read_u32(&bytecode[sz..]);
+            sz += data_sz;
             Op::Const4u(res)
         }
         0x0d => {
-            let res = read_i32(&mut pc, &bytecode);
+            let (data_sz, res) = read_i32(&bytecode[sz..]);
+            sz += data_sz;
             Op::Const4s(res)
         }
         0x0e => {
-            let res = read_u64(&mut pc, &bytecode);
+            let (data_sz, res) = read_u64(&bytecode[sz..]);
+            sz += data_sz;
             Op::Const8u(res)
         }
         0x0f => {
-            let res = read_i64(&mut pc, &bytecode);
+            let (data_sz, res) = read_i64(&bytecode[sz..]);
+            sz += data_sz;
             Op::Const8s(res)
         }
         0x10 => {
-            let res = read_uleb128(&mut pc, &bytecode);
+            let (data_sz, res) = read_uleb128(&bytecode[sz..]);
+            sz += data_sz;
 
             Op::Constu(res)
         }
         0x11 => {
-            let res = read_sleb128(&mut pc, &bytecode);
+            let (data_sz, res) = read_sleb128(&bytecode[sz..]);
+            sz += data_sz;
 
             Op::Consts(res)
         }
@@ -259,7 +282,8 @@ pub fn decode(mut pc: usize, bytecode: &[u8]) -> (usize, Op) {
         0x13 => Op::Drop,
         0x14 => Op::Over,
         0x15 => {
-            let off = read_u8(&mut pc, &bytecode);
+            let (data_sz, off) = read_u8(&bytecode[sz..]);
+            sz += data_sz;
 
             Op::Pick(off)
         }
@@ -277,7 +301,8 @@ pub fn decode(mut pc: usize, bytecode: &[u8]) -> (usize, Op) {
         0x21 => Op::Or,
         0x22 => Op::Plus,
         0x23 => {
-            let val = read_uleb128(&mut pc, &bytecode);
+            let (data_sz, val) = read_uleb128(&bytecode[sz..]);
+            sz += data_sz;
 
             Op::PlusConst(val)
         }
@@ -286,7 +311,8 @@ pub fn decode(mut pc: usize, bytecode: &[u8]) -> (usize, Op) {
         0x26 => Op::Shra,
         0x27 => Op::Xor,
         0x28 => {
-            let off = read_i16(&mut pc, &bytecode);
+            let (data_sz, off) = read_i16(&bytecode[sz..]);
+            sz += data_sz;
 
             Op::Bra(off)
         }
@@ -297,7 +323,8 @@ pub fn decode(mut pc: usize, bytecode: &[u8]) -> (usize, Op) {
         0x2d => Op::Lt,
         0x2e => Op::Ne,
         0x2f => {
-            let off = read_i16(&mut pc, &bytecode);
+            let (data_sz, off) = read_i16(&bytecode[sz..]);
+            sz += data_sz;
 
             Op::Skip(off)
         }
@@ -314,20 +341,43 @@ pub fn decode(mut pc: usize, bytecode: &[u8]) -> (usize, Op) {
         0x70..=0x8f => {
             let breg = op - 0x70;
 
-            Op::Breg(breg)
+            let (data_sz, off) = read_sleb128(&bytecode[sz..]);
+            sz += data_sz;
+
+            Op::BReg(breg, off as isize)
+        }
+        0x90 => {
+            let (data_sz, val) = read_uleb128(&bytecode[sz..]);
+            sz += data_sz;
+
+            Op::RegX(val)
+        }
+        0x92 => {
+            let (data_sz, reg) = read_uleb128(&bytecode[sz..]);
+            sz += data_sz;
+
+            let (data_sz, off) = read_sleb128(&bytecode[sz..]);
+            sz += data_sz;
+
+            Op::BRegX(reg, off as isize)
         }
         0x94 => {
-            let sz = read_u8(&mut pc, &bytecode) as usize;
+            let (data_sz, deref_sz) = read_u8(&bytecode[sz..]);
+            sz += data_sz;
 
-            assert!([1, 2, 4, 8].contains(&sz));
+            assert!([1, 2, 4, 8].contains(&deref_sz));
 
-            Op::DerefSize(sz)
+            Op::DerefSize(deref_sz.into())
         }
         0x96 => Op::Nop,
-        _ => unimplemented!("opcode {:04x}: 0x{:02x}", orig_pc, op),
+        _ => {
+            error!("unimplemented opcode: 0x{:02x}", op);
+
+            return Err(DwarfDisError::Decode(op));
+        }
     };
 
-    debug!("{:04x}: {:x?}", orig_pc, parsed_op);
+    debug!("{:x?}", parsed_op);
 
-    (pc - orig_pc, parsed_op)
+    Ok((sz, parsed_op))
 }

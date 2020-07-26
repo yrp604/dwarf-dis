@@ -1,5 +1,5 @@
 [package]
-name = "dwarf_dis"
+name = "dwarf-dis"
 version = "0.1.0"
 authors = ["yrp <yrp604@protonmail.com>"]
 edition = "2018"

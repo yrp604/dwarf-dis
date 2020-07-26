@@ -1,3 +1,4 @@
+use std::cmp;
 use std::convert::TryInto;
 use std::error::Error;
 use std::fmt;
@@ -71,9 +72,11 @@ fn read_i64(bytecode: &[u8]) -> (usize, i64) {
 }
 
 fn read_uleb128(bytecode: &[u8]) -> (usize, u64) {
+    let len = cmp::min(10, bytecode.len());
+
     let (val, sz) = ULEB128::read_from(bytecode).expect(&format!(
         "Could not read uleb128 value from bytecode {:x?}",
-        &bytecode[..10]
+        &bytecode[..len]
     ));
 
 
@@ -81,9 +84,11 @@ fn read_uleb128(bytecode: &[u8]) -> (usize, u64) {
 }
 
 fn read_sleb128(bytecode: &[u8]) -> (usize, i64) {
+    let len = cmp::min(10, bytecode.len());
+
     let (val, sz) = SLEB128::read_from(bytecode).expect(&format!(
         "Could not read sleb128 value from bytecode @ {:x?}",
-        &bytecode[..10]
+        &bytecode[..len]
     ));
 
     (sz, val.into())
@@ -158,6 +163,12 @@ pub enum Op {
     BRegX(u64, isize),
     DerefSize(usize),
     Nop,
+}
+
+impl fmt::Display for Op {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:x?}", self)
+    }
 }
 
 impl Op {
@@ -365,7 +376,9 @@ pub fn decode(bytecode: &[u8]) -> Result<(usize, Op), DwarfDisError> {
             let (data_sz, deref_sz) = read_u8(&bytecode[sz..]);
             sz += data_sz;
 
-            assert!([1, 2, 4, 8].contains(&deref_sz));
+            if ![1, 2, 4, 8].contains(&deref_sz) {
+                return Err(DwarfDisError::Decode(op));
+            }
 
             Op::DerefSize(deref_sz.into())
         }

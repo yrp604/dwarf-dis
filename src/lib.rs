@@ -113,6 +113,7 @@ impl Error for DwarfDisError {
     }
 }
 
+/// A decoded Dwarf opcode
 #[derive(Copy, Clone, Debug, Hash, Eq, PartialEq)]
 pub enum Op {
     Addr(u64),
@@ -172,6 +173,7 @@ impl fmt::Display for Op {
 }
 
 impl Op {
+    /// Opcode mnemonic
     pub fn mnem(&self) -> &str {
         match *self {
             Self::Addr(_) => "addr",
@@ -226,6 +228,23 @@ impl Op {
     }
 }
 
+/// Decode a Dwarf opcode
+///
+/// Returns a tuple of instruction size and the decoded opcode
+///
+/// # Example
+///
+/// ```
+/// # use dwarf_dis::{decode, Op};
+/// let bytecode = &[0x96];
+///
+/// assert_eq!((1, Op::Nop), decode(bytecode).unwrap());
+/// ```
+///
+/// # Panics
+///
+/// Will panic on zero length slices or partial opcodes (e.g. a const8u where 8 bytes of input are
+/// not available)
 pub fn decode(bytecode: &[u8]) -> Result<(usize, Op), DwarfDisError> {
     let op = bytecode[0];
     let mut sz = 1;
